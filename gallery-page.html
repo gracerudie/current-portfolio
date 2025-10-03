@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery - Grace Rudie</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Back Button */
+        .back-btn {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            z-index: 1000;
+            padding: 0.8rem 1.5rem;
+            background: rgba(102, 126, 234, 0.8);
+            backdrop-filter: blur(10px);
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        .gallery-container {
+            padding: 6rem 2rem 4rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .gallery-title {
+            font-size: 3rem;
+            margin-bottom: 4rem;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gallery-section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            font-size: 1.8rem;
+            color: #f093fb;
+            margin-bottom: 1.5rem;
+            padding-left: 0.5rem;
+        }
+
+        .photos-row {
+            display: flex;
+            gap: 1.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 1rem 0.5rem;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #1a1a2a;
+        }
+
+        .photos-row::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .photos-row::-webkit-scrollbar-track {
+            background: #1a1a2a;
+            border-radius: 10px;
+        }
+
+        .photos-row::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .photo-item {
+            position: relative;
+            min-width: 350px;
+            height: 250px;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .photo-item:hover {
+            transform: scale(1.05) translateY(-10px);
+            border-color: #667eea;
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+            z-index: 10;
+        }
+
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.3s ease;
+        }
+
+        .photo-item:hover img {
+            filter: brightness(0.6);
+        }
+
+        .photo-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1.5rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            opacity: 0;
+        }
+
+        .photo-item:hover .photo-caption {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .photo-caption h4 {
+            font-size: 1.1rem;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .photo-caption p {
+            font-size: 0.9rem;
+            color: #b8c5d6;
+            line-height: 1.4;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .lightbox-caption {
+            position: absolute;
+            bottom: -80px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .lightbox-caption h4 {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+        }
+
+        .lightbox-caption p {
+            font-size: 1rem;
+            color: #b8c5d6;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 3rem;
+            color: white;
+            cursor: pointer;
+            z-index: 2001;
+            background: rgba(0, 0, 0, 0.5);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(102, 126, 234, 0.8);
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 768px) {
+            .gallery-title {
+                font-size: 2rem;
+            }
+            .section-header {
+                font-size: 1.4rem;
+            }
+            .photo-item {
+                min-width: 280px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <a href="index.html" class="back-btn">← Back to Portfolio</a>
+
+    <div class="gallery-container">
+        <h1 class="gallery-title">Photo Gallery</h1>
+
+        <!-- BNY Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">BNY - Software Development Co-Op</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="BNY/bny1.jpg">
+                    <img src="BNY/bny1.jpg" alt="BNY Team">
+                    <div class="photo-caption">
+                        <h4>BNY Team Event</h4>
+                        <p>End of co-op celebration with fellow interns and team members</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="BNY/bny2.jpg">
+                    <img src="BNY/bny2.jpg" alt="BNY Work">
+                    <div class="photo-caption">
+                        <h4>Working with the Team</h4>
+                        <p>Collaborating on compliance automation projects</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="BNY/bny3.jpg">
+                    <img src="BNY/bny3.jpg" alt="BNY Colleagues">
+                    <div class="photo-caption">
+                        <h4>Professional Development</h4>
+                        <p>With colleagues during the Promptathon workshop</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="BNY/bny4.jpg">
+                    <img src="BNY/bny4.jpg" alt="BNY Event">
+                    <div class="photo-caption">
+                        <h4>Intern Showcase</h4>
+                        <p>Presenting automation tools to senior leadership</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="BNY/bny5.jpg">
+                    <img src="BNY/bny5.jpg" alt="BNY Group">
+                    <div class="photo-caption">
+                        <h4>Lake Mary Office</h4>
+                        <p>Group photo with the Enterprise Compliance Engineering team</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Limbitless Solutions Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">Limbitless Solutions - Software Engineering Intern</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="Limbitless Solutions/limbitless1.jpg">
+                    <img src="Limbitless Solutions/limbitless1.jpg" alt="Limbitless Project">
+                    <div class="photo-caption">
+                        <h4>Bionic Arm Development</h4>
+                        <p>Working on cross-platform UI for bionic limb control</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Limbitless Solutions/limbitless2.jpg">
+                    <img src="Limbitless Solutions/limbitless2.jpg" alt="Limbitless Team">
+                    <div class="photo-caption">
+                        <h4>Team Collaboration</h4>
+                        <p>Debugging embedded systems with the engineering team</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Limbitless Solutions/limbitless3.jpg">
+                    <img src="Limbitless Solutions/limbitless3.jpg" alt="Limbitless Work">
+                    <div class="photo-caption">
+                        <h4>Professional Development</h4>
+                        <p>Completing workshops on embedded development and Arduino programming</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Parks Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">Theme Parks - TEA Competition</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="Theme Parks/themepark1.jpg">
+                    <img src="Theme Parks/themepark1.jpg" alt="TEA Competition">
+                    <div class="photo-caption">
+                        <h4>First Place Winners</h4>
+                        <p>Celebrating our win at the TEA Land Design Competition</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Theme Parks/themepark2.jpg">
+                    <img src="Theme Parks/themepark2.jpg" alt="Theme Park Design">
+                    <div class="photo-caption">
+                        <h4>Design Presentation</h4>
+                        <p>Presenting operational efficiency models to industry judges</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Theme Parks/themepark3.jpg">
+                    <img src="Theme Parks/themepark3.jpg" alt="Presentation">
+                    <div class="photo-caption">
+                        <h4>Judge Panel</h4>
+                        <p>Q&A with Universal Creative and Disney Imagineering professionals</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Theme Parks/themepark4.jpg">
+                    <img src="Theme Parks/themepark4.jpg" alt="Competition">
+                    <div class="photo-caption">
+                        <h4>Best Attraction Award</h4>
+                        <p>Receiving recognition for sustainability and innovation</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Theme Parks/themepark5.jpg">
+                    <img src="Theme Parks/themepark5.jpg" alt="Team">
+                    <div class="photo-caption">
+                        <h4>Team Collaboration</h4>
+                        <p>Working together to create the winning design</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Theme Parks/themepark6.jpg">
+                    <img src="Theme Parks/themepark6.jpg" alt="Award">
+                    <div class="photo-caption">
+                        <h4>Award Ceremony</h4>
+                        <p>1st Place Overall out of 6 competing teams</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Government Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">UCF Student Government</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="Student Government/sg1.jpg">
+                    <img src="Student Government/sg1.jpg" alt="SG Event">
+                    <div class="photo-caption">
+                        <h4>Leadership Program</h4>
+                        <p>Coordinating the SG Leadership program for 70+ students</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg2.jpg">
+                    <img src="Student Government/sg2.jpg" alt="SG Meeting">
+                    <div class="photo-caption">
+                        <h4>Senate Session</h4>
+                        <p>Representing Engineering and Computer Science students</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg3.jpg">
+                    <img src="Student Government/sg3.jpg" alt="SG Leadership">
+                    <div class="photo-caption">
+                        <h4>Committee Work</h4>
+                        <p>Serving on Student Body Advocacy Committee</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg4.jpg">
+                    <img src="Student Government/sg4.jpg" alt="SG Team">
+                    <div class="photo-caption">
+                        <h4>Women's Caucus</h4>
+                        <p>Advocating for student voices in university decisions</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg5.jpg">
+                    <img src="Student Government/sg5.jpg" alt="SG Activity">
+                    <div class="photo-caption">
+                        <h4>Campus Initiative</h4>
+                        <p>Working on student-centered policy changes</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg6.jpg">
+                    <img src="Student Government/sg6.jpg" alt="SG Project">
+                    <div class="photo-caption">
+                        <h4>Legislative Assistant Role</h4>
+                        <p>Coordinating senate initiatives and student outreach</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg7.jpg">
+                    <img src="Student Government/sg7.jpg" alt="SG Initiative">
+                    <div class="photo-caption">
+                        <h4>Community Engagement</h4>
+                        <p>Building connections between students and administration</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Student Government/sg8.jpg">
+                    <img src="Student Government/sg8.jpg" alt="SG Service">
+                    <div class="photo-caption">
+                        <h4>Senate Team</h4>
+                        <p>Collaborating with fellow senators on student advocacy</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dean's Leadership Council Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">Dean's Leadership Council</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="Deans Leadership Council/dlc1.jpg">
+                    <img src="Deans Leadership Council/dlc1.jpg" alt="DLC Event">
+                    <div class="photo-caption">
+                        <h4>Honors College Event</h4>
+                        <p>Welcoming alumni and donors at college functions</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Deans Leadership Council/dlc2.jpg">
+                    <img src="Deans Leadership Council/dlc2.jpg" alt="DLC Meeting">
+                    <div class="photo-caption">
+                        <h4>Student-Dean Liaison</h4>
+                        <p>Serving as bridge between students and administration</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="Deans Leadership Council/dlc3.jpg">
+                    <img src="Deans Leadership Council/dlc3.jpg" alt="DLC Activity">
+                    <div class="photo-caption">
+                        <h4>Burnett Honors College</h4>
+                        <p>Representing the prestige and values of the Honors College</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UCF Involvement Section -->
+        <div class="gallery-section">
+            <h2 class="section-header">UCF Campus Involvement</h2>
+            <div class="photos-row">
+                <div class="photo-item" data-img="UCF Involvement/ucf1.jpg">
+                    <img src="UCF Involvement/ucf1.jpg" alt="UCF Event">
+                    <div class="photo-caption">
+                        <h4>TEA @ UCF</h4>
+                        <p>Theme park industry networking and career development</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="UCF Involvement/ucf2.jpg">
+                    <img src="UCF Involvement/ucf2.jpg" alt="UCF Activity">
+                    <div class="photo-caption">
+                        <h4>Knight Hacks</h4>
+                        <p>Leading development team for AI-powered mobile app</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="UCF Involvement/ucf3.jpg">
+                    <img src="UCF Involvement/ucf3.jpg" alt="UCF Organization">
+                    <div class="photo-caption">
+                        <h4>Honors Congress</h4>
+                        <p>Participating in academic and professional development events</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="UCF Involvement/ucf4.jpg">
+                    <img src="UCF Involvement/ucf4.jpg" alt="UCF Participation">
+                    <div class="photo-caption">
+                        <h4>Alpha Sigma Kappa</h4>
+                        <p>Collaborating on technical projects and workshops</p>
+                    </div>
+                </div>
+                <div class="photo-item" data-img="UCF Involvement/ucf5.jpg">
+                    <img src="UCF Involvement/ucf5.jpg" alt="UCF Engagement">
+                    <div class="photo-caption">
+                        <h4>Industry Panels</h4>
+                        <p>Attending career development workshops and networking events</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-close" id="lightbox-close">&times;</div>
+        <div class="lightbox-content">
+            <img src="" alt="" id="lightbox-img">
+            <div class="lightbox-caption" id="lightbox-caption">
+                <h4 id="lightbox-title"></h4>
+                <p id="lightbox-desc"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Background starfield
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 2,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const starsVertices = [];
+        for (let i = 0; i < 3000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starsVertices.push(x, y, z);
+        }
+
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        camera.position.z = 50;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            stars.rotation.y += 0.0002;
+            stars.rotation.x += 0.0001;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Lightbox functionality
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxTitle = document.getElementById('lightbox-title');
+        const lightboxDesc = document.getElementById('lightbox-desc');
+        const lightboxClose = document.getElementById('lightbox-close');
+
+        document.querySelectorAll('.photo-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const imgSrc = this.getAttribute('data-img');
+                const title = this.querySelector('.photo-caption h4').textContent;
+                const desc = this.querySelector('.photo-caption p').textContent;
+                
+                lightboxImg.src = imgSrc;
+                lightboxTitle.textContent = title;
+                lightboxDesc.textContent = desc;
+                lightbox.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        lightboxClose.addEventListener('click', () => {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = 'auto';
+        });
+
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Parallax scroll effect
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            camera.position.y = scrolled * 0.01;
+        });
+    </script>
+</body>
+</html>
