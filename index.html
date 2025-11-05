@@ -1167,6 +1167,20 @@
             }, 500);
         }
 
+        function revealContentWithoutJourney() {
+            if (launchScreen.classList.contains('hidden')) {
+                return;
+            }
+
+            launchScreen.classList.add('hidden');
+            journeyScreen.classList.remove('active');
+            isJourneyActive = false;
+
+            const content = document.querySelector('.content');
+            content.classList.add('visible');
+            document.body.style.overflow = 'auto';
+        }
+
         launchBtn.addEventListener('click', startJourney);
         
         // Do NOT auto-launch - wait for user to click
@@ -1185,6 +1199,7 @@
             link.addEventListener('click', function() {
                 menuToggle.classList.remove('active');
                 navMenu.classList.remove('active');
+                revealContentWithoutJourney();
             });
         });
 
@@ -1238,11 +1253,19 @@
         // Smooth scroll for navigation
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
+                const targetSelector = this.getAttribute('href');
+                if (!targetSelector || targetSelector === '#') {
+                    return;
                 }
+
+                const target = document.querySelector(targetSelector);
+                if (!target) {
+                    return;
+                }
+
+                e.preventDefault();
+                revealContentWithoutJourney();
+                requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth' }));
             });
         });
 
