@@ -1167,8 +1167,11 @@
             }, 500);
         }
 
-        function revealContentWithoutJourney() {
+        function revealContentWithoutJourney(afterReveal) {
             if (launchScreen.classList.contains('hidden')) {
+                if (typeof afterReveal === 'function') {
+                    afterReveal();
+                }
                 return;
             }
 
@@ -1179,6 +1182,10 @@
             const content = document.querySelector('.content');
             content.classList.add('visible');
             document.body.style.overflow = 'auto';
+
+            if (typeof afterReveal === 'function') {
+                requestAnimationFrame(afterReveal);
+            }
         }
 
         launchBtn.addEventListener('click', startJourney);
@@ -1264,9 +1271,20 @@
                 }
 
                 e.preventDefault();
-                revealContentWithoutJourney();
-                requestAnimationFrame(() => target.scrollIntoView({ behavior: 'smooth' }));
+                revealContentWithoutJourney(() => target.scrollIntoView({ behavior: 'smooth' }));
             });
+        });
+
+        window.addEventListener('load', () => {
+            const initialHash = window.location.hash;
+            if (!initialHash) {
+                return;
+            }
+
+            const target = document.querySelector(initialHash);
+            if (target) {
+                revealContentWithoutJourney(() => target.scrollIntoView({ behavior: 'auto' }));
+            }
         });
 
         // Intersection Observer for fade-in animations
